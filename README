@@ -1,0 +1,20 @@
+A Demonstration of the Fine Art of Burning Network Bandwidth by
+modulating Morse Code on Packet Length
+------------------------------------------------------------------
+For this to work, add a protocol called "morse" to /etc/protocols.
+I used protocol 101 for this:
+
+	morse	101	MORSE
+
+Start 'morsercv' on the destination host and give the source host
+name or IP address as its first argument. Then use 'morsesend' to
+send a text line to the receiver.
+
+Sequence numbering is implemented but no attempt at packet
+reordering is done and limited-to-none recovery is performed.
+
+/Hans Liss
+Hans@Liss.pp.se
+
+
+

@@ -1,0 +1,35 @@
+   International Morse Code
+
+   Letter Morse    Letter Morse    Digit Morse
+   A      .-       N      -.       0     -----
+   B      -...     O      ---      1     .----
+   C      -.-.     P      .--.     2     ..---
+   D      -..      Q      --.-     3     ...--
+   E      .        R      .-.      4     ....-
+   F      ..-.     S      ...      5     .....
+   G      --.      T      -        6     -....
+   H      ....     U      ..-      7     --...
+   I      ..       V      ...-     8     ---..
+   J      .---     W      .--      9     ----.
+   K      -.-      X      -..-
+   L      .-..     Y      -.--
+   M      --       Z      --..
+
+   Letter Morse       Punctuation Mark     Morse
+   Ä      .-.-     Full-stop (period)     .-.-.-
+   Á      .--.-    Comma                  --..--
+   Å      .--.-    Colon                  ---...
+   Ch     ----     Question mark (query)  ..--..
+   É      ..-..    Apostrophe             .----.
+   Ñ      --.--    Hyphen                 -....-
+   Ö      ---.     Fraction bar           -..-.
+   Ü      ..--     Brackets (parentheses) -.--.-
+                   Quotation marks        .-..-.
+
+   If the duration of a dot is taken to be one unit then that of a dash is
+   three units. The space between the components of one character is one
+   unit, between characters is three units and between words seven units. To
+   indicate that a mistake has been made and for the receiver to delete the
+   last word send ........ (eight dots).
+  ------------------------------------------------------------------------
+                      Page last updated 27 November 2000
