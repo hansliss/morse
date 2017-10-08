@@ -11,7 +11,7 @@ name or IP address as its first argument. Then use 'morsesend' to
 send a text line to the receiver.
 
 Sequence numbering is implemented but no attempt at packet
-reordering is done and limited-to-none recovery is performed.
+reordering is done and practically no error recovery is performed.
 
 /Hans Liss
 Hans@Liss.pp.se

@@ -1,0 +1,34 @@
+AC_INIT(morsesend.c)
+PRODUCT=morse
+VERSION=1.1-SNAPSHOT
+AC_CONFIG_HEADER(config.h)
+AC_PROG_CC
+CFLAGS="-O3"
+AC_DEFINE_UNQUOTED(PRODUCT, "$PRODUCT")
+AC_DEFINE_UNQUOTED(VERSION, "$VERSION")
+AC_SUBST(PRODUCT)
+AC_SUBST(VERSION)
+
+LDFLAGS="$LDFLAGS -L/usr/local/lib"
+CFLAGS="$CFLAGS -I/usr/local/include"
+CPPFLAGS="$CPPFLAGS -I/usr/local/include"
+
+dnl Checks for programs.
+AC_PROG_CC
+if test $CC = "gcc"; then
+	CFLAGS="$CFLAGS -Wall"
+fi
+AC_PROG_INSTALL
+AC_PROG_LN_S
+
+dnl Checks for header files.
+AC_HEADER_STDC
+AC_CHECK_HEADERS(limits.h unistd.h netdb.h sys/socket.h arpa/inet.h netinet/in.h)
+
+dnl Checks for typedefs, structures, and compiler characteristics.
+AC_C_CONST
+
+dnl Checks for library functions.
+AC_TYPE_SIGNAL
+
+AC_OUTPUT(Makefile)
