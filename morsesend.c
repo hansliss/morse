@@ -1,7 +1,7 @@
 /* ====================================================================
  * The Morse-over-IP License, Version 1.0
  *
- * Copyright (c) 2002 Hans Liss (http://Hans.Liss.pp.se).  All rights
+ * Copyright (c) 2002,2017 Hans Liss (Hans@Liss.pp.se).  All rights
  * reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -18,8 +18,8 @@
  *
  * 3. The end-user documentation included with the redistribution,
  *    if any, must include the following acknowledgment:
- *       "This product includes software developed by the
- *        Hans Liss (http://hans.liss.pp.se)."
+ *       "This product includes software developed by Hans Liss
+ *       (Hans@Liss.pp.se)."
  *    Alternately, this acknowledgment may appear in the software itself,
  *    if and wherever such third-party acknowledgments normally appear.
  *
@@ -47,15 +47,18 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 
-#define PSIZE 32
+#ifndef PROTO_NAME
+#define PROTO_NAME "morse"
+#endif
+
+#define PSIZE 1500
 #define PLEN_DASH 300
 #define PLEN_DOT 100
 #define PLEN_CSPACE 10
 #define PLEN_WSPACE 15
 #define PLEN_TERM 400
 
-struct xtab_struct
-{
+struct xtab_struct {
   char c;
   char *x;
 } xtab[]=
@@ -68,6 +71,14 @@ struct xtab_struct
     {'-', "-....-"},
     {'.', ".-.-.-"},
     {'/', "-..-."},
+    {'&', ".-..."},
+    {'=', "-...-"},
+    {':', "---..."},
+    {';', "-.-.-"},
+    {'+', ".-.-."},
+    {'_', "..--.-"},
+    {'$', "...-..-"},
+    {'@', ".--.-."},
     {'0', "-----"},
     {'1', ".----"},
     {'2', "..---"},
@@ -117,116 +128,120 @@ struct xtab_struct
 
 #define NCODES (sizeof(xtab)/sizeof(struct xtab_struct))
 
-struct morse_packet
-{
+struct morse_packet {
   unsigned long seq;
 };
 
-char mytoupper(char c)
-{
+/* Convert a character to uppercase, including some (latin-1) national characters
+ */
+char mytoupper(char c) {
   char *p;
-  if ((p=strchr("áäåéñöüÁÄÅÉÑÖÜ", c))!=NULL)
+  if ((p=strchr("áäåéñöüÁÄÅÉÑÖÜ", c))!=NULL && strlen(p) > 7) {
     return *(p+7);
-  else
+  } else {
     return toupper(c);
+  }
 }
 
 /* Translate an ASCII hostname or ip address to a struct in_addr - return 0
    if unable */
-int makeaddress(char *name_or_ip, struct in_addr *res)
-{
+int makeaddress(char *name_or_ip, struct in_addr *res) {
   struct hostent *he;
-  if (!inet_aton(name_or_ip,res))
-    {
-      if (!(he=gethostbyname(name_or_ip)))
-	return 0;
-      else
-	{
-	  memcpy(res, he->h_addr_list[0], sizeof(*res));
-	  return 1;
-	}
+  if (!inet_aton(name_or_ip,res)) {
+    if (!(he=gethostbyname(name_or_ip))) {
+      return 0;
+    } else {
+      memcpy(res, he->h_addr_list[0], sizeof(*res));
+      return 1;
     }
-  else
+  } else {
     return 1;
+  }
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
   int sock;
   struct protoent *p;
-  char mypacket[PSIZE];
+  static char mypacket[PSIZE];
   struct morse_packet *mpack=(struct morse_packet *)mypacket;
   unsigned long seqno=0;
   int i, j, k;
   char *mcode;
   struct sockaddr_in recipient;
+  memset(mypacket, 0, sizeof(mypacket));
 
-  if (argc<2)
-    {
-      fprintf(stderr, "Usage: %s <rcpt> <text> ...\n", argv[0]);
-      return -1;
-    }
+  // Check command-line parameters and extract the recipient
+  if (argc<2) {
+    fprintf(stderr, "Usage: %s <rcpt host/ip> <text> ...\n", argv[0]);
+    return -1;
+  }
   memset(&recipient, 0, sizeof(recipient));
   recipient.sin_family=AF_INET;
-  if (!makeaddress(argv[1], &recipient.sin_addr))
-    {
-      perror(argv[1]);
-      return -2;
-    }
-  if (!(p=getprotobyname("morse")))
-    {
-      perror("morse");
-      return -1;
-    }
-  if ((sock=socket(AF_INET, SOCK_RAW, p->p_proto))<0)
-    {
-      perror("socket()");
-      return -2;
-    }
-  for (i=2; i<argc; i++)
-    {
-      for (j=0; j<strlen(argv[i]); j++)
-	{
-	  mcode=NULL;
-	  for (k=0; k<NCODES; k++)
-	    if (xtab[k].c==mytoupper(argv[i][j]))
-	      mcode=xtab[k].x;
-	  if (!mcode)
-	    printf("Illegal character %c\n", argv[i][j]);
-	  else
-	    {
-	      for (k=0; k<strlen(mcode); k++)
-		{
-		  memset(mypacket, 0, sizeof(mypacket));
-		  mpack->seq=htonl(seqno++);
-		  if (sendto(sock, mypacket, ((mcode[k]=='-')?PLEN_DASH:PLEN_DOT), 0,
-			     (struct sockaddr *)&recipient, sizeof(recipient))<0)
-		    perror("sendto()");
-		}
-	    }
-	  if (j<(strlen(argv[i])-1))
-	    {
-	      memset(mypacket, 0, sizeof(mypacket));
-	      mpack->seq=htonl(seqno++);
-	      if (sendto(sock, mypacket, PLEN_CSPACE, 0,
-			 (struct sockaddr *)&recipient, sizeof(recipient))<0)
-		perror("sendto()");
-	    }
+  if (!makeaddress(argv[1], &recipient.sin_addr)) {
+    perror(argv[1]);
+    return -2;
+  }
+
+  // Look up the protocol
+  if (!(p=getprotobyname(PROTO_NAME))) {
+    fprintf(stderr, "Couldn't find the \"%s\" protocol.\n", PROTO_NAME);
+    return -1;
+  }
+
+  // Open a socket
+  if ((sock=socket(AF_INET, SOCK_RAW, p->p_proto))<0) {
+    perror("socket()");
+    return -2;
+  }
+
+  // Loop over the remaining arguments, treating them as text
+  for (i=2; i<argc; i++) {
+    for (j=0; j<strlen(argv[i]); j++) {
+      // Look up the morse code for the next character,
+      // as a string of dots and dashes
+      mcode=NULL;
+      for (k=0; k<NCODES; k++) {
+	if (xtab[k].c==mytoupper(argv[i][j])) {
+	  mcode=xtab[k].x;
 	}
-      if (i < (argc-1))
-	{
-	  memset(mypacket, 0, sizeof(mypacket));
+      }
+      if (!mcode) {
+	printf("Illegal character %c\n", argv[i][j]);
+      } else {
+	// Loop over the morse string and send a packet for each dot/dash,
+	// using the packet length to encode which it is
+	for (k=0; k<strlen(mcode); k++) {
 	  mpack->seq=htonl(seqno++);
-	  if (sendto(sock, mypacket, PLEN_WSPACE, 0,
-		     (struct sockaddr *)&recipient, sizeof(recipient))<0)
+	  if (sendto(sock, mypacket, ((mcode[k]=='-')?PLEN_DASH:PLEN_DOT), 0,
+		     (struct sockaddr *)&recipient, sizeof(recipient))<0) {
 	    perror("sendto()");
+	  }
 	}
+      }
+      // If there are more characters, send a character delimiter
+      if (j<(strlen(argv[i])-1)) {
+	mpack->seq=htonl(seqno++);
+	if (sendto(sock, mypacket, PLEN_CSPACE, 0,
+		   (struct sockaddr *)&recipient, sizeof(recipient))<0) {
+	  perror("sendto()");
+	}
+      }
     }
-  memset(mypacket, 0, sizeof(mypacket));
+    // If there are more command-line arguments (= more words) send a space
+    if (i < (argc-1))	{
+      mpack->seq=htonl(seqno++);
+      if (sendto(sock, mypacket, PLEN_WSPACE, 0,
+		 (struct sockaddr *)&recipient, sizeof(recipient))<0) {
+	perror("sendto()");
+      }
+    }
+  }
+  // Send a message termination code
   mpack->seq=htonl(seqno++);
   if (sendto(sock, mypacket, PLEN_TERM, 0,
-	     (struct sockaddr *)&recipient, sizeof(recipient))<0)
+	     (struct sockaddr *)&recipient, sizeof(recipient))<0) {
     perror("sendto()");
+  }
   close(sock);
   return 0;
 }
