@@ -133,7 +133,7 @@ int makeaddress(char *name_or_ip, struct in_addr *res)
 	return 0;
       else
 	{
-	  memcpy(res, he->h_addr_list[0], sizeof(res));
+	  memcpy(res, he->h_addr_list[0], sizeof(*res));
 	  return 1;
 	}
     }
@@ -164,8 +164,8 @@ int main(int argc, char *argv[])
   fd_set myfdset;
   struct timeval select_timeout;
   int ready;
-  int alen;
-  int len;
+  unsigned int alen;
+  unsigned int len;
   char mword[512];
 
   if (argc<2)

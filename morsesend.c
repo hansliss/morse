@@ -142,7 +142,7 @@ int makeaddress(char *name_or_ip, struct in_addr *res)
 	return 0;
       else
 	{
-	  memcpy(res, he->h_addr_list[0], sizeof(res));
+	  memcpy(res, he->h_addr_list[0], sizeof(*res));
 	  return 1;
 	}
     }
